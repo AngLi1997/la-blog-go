@@ -2,6 +2,7 @@ package article
 
 import (
 	"github.com/duke-git/lancet/v2/convertor"
+	"github.com/duke-git/lancet/v2/slice"
 	"github.com/gin-gonic/gin"
 	"la-blog-go/api"
 	"la-blog-go/global"
@@ -27,7 +28,10 @@ var (
 			Func: func(c *gin.Context, dst interface{}) {
 				var articles []model.Article
 				global.DB.Model(articles).Order("created_at desc").Preload("Categories").Preload("Tags").Find(&articles)
-				response.SuccessWithData(c, "查询成功", articles)
+				result := slice.Map(articles, func(i int, article model.Article) VO {
+					return convertToArticleVO(&article)
+				})
+				response.SuccessWithData(c, "查询成功", result)
 			},
 		},
 	}
@@ -96,9 +100,11 @@ func convertToArticleVO(article *model.Article) VO {
 		Title:    article.Title,
 		SubTitle: article.SubTitle,
 		Content:  article.Content,
-		//CategoryNames: stream.FromSlice(article.Categories).Map(func(c model.Category) string {
-		//	return c.Name
-		//}),
-		//TagNames:      []string{},
+		CategoryNames: slice.Map(article.Categories, func(i int, category model.Category) string {
+			return category.Name
+		}),
+		TagNames: slice.Map(article.Tags, func(i int, tag model.Tag) string {
+			return tag.Name
+		}),
 	}
 }
