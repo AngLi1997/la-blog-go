@@ -1,7 +1,39 @@
 package tag
 
-import "la-blog-go/api"
+import (
+	"github.com/duke-git/lancet/v2/slice"
+	"github.com/gin-gonic/gin"
+	"la-blog-go/api"
+	"la-blog-go/global"
+	"la-blog-go/model"
+	"la-blog-go/response"
+)
 
 var (
-	Apis []api.Api
+	Apis = []api.Api{
+		{
+			Url:    "/list_all",
+			Method: "GET",
+			Func: func(c *gin.Context, dst interface{}) {
+				var tags []model.Tag
+				global.DB.Model(tags).Order("created_at desc").Find(&tags)
+				result := slice.Map(tags, func(i int, tag model.Tag) SimpleVO {
+					return convertToSimpleVO(&tag)
+				})
+				response.SuccessWithData(c, "查询成功", result)
+			},
+		},
+	}
 )
+
+func convertToSimpleVO(tag *model.Tag) SimpleVO {
+	return SimpleVO{
+		ID:   tag.ID,
+		Name: tag.Name,
+	}
+}
+
+type SimpleVO struct {
+	ID   uint
+	Name string `json:"name"`
+}
