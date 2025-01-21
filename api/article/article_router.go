@@ -5,6 +5,7 @@ import (
 	"github.com/duke-git/lancet/v2/slice"
 	"github.com/gin-gonic/gin"
 	"la-blog-go/api"
+	"la-blog-go/common"
 	"la-blog-go/global"
 	"la-blog-go/model"
 	"la-blog-go/response"
@@ -55,7 +56,7 @@ var (
 					response.Fail(c, "参数错误")
 					return
 				}
-				result := global.DB.Model(article).Where("id = ?", id).Preload("Categories").Preload("Tags").First(&article)
+				result := global.DB.Model(article).Where("id = ?", id).Preload("Categories").Preload("Tags").Take(&article)
 				if result.RowsAffected == 0 {
 					response.Fail(c, "未找到文章数据")
 					return
@@ -63,15 +64,43 @@ var (
 				response.SuccessWithData(c, "查询成功", convertToVO(&article))
 			},
 		}, {
-			Url:    "/search",
-			Method: "GET",
+			Dst:       &Query{},
+			Url:       "/page",
+			Method:    "POST",
+			ParamType: "body",
 			Func: func(c *gin.Context, dst interface{}) {
 				var articles []model.Article
-				global.DB.Model(articles).Preload("Categories", "name in ", nil).Preload("Tags", "name in ", nil).Find(&articles)
-				result := slice.Map(articles, func(i int, article model.Article) SimpleVO {
-					return convertToSimpleVO(&article)
+				var total int64
+				query := dst.(*Query)
+				sql := global.DB.Model(articles)
+				if query.CategoryName != "" {
+					sql = sql.Joins("JOIN article_categories ON articles.id = article_categories.article_id").
+						Joins("JOIN categories ON article_categories.category_id = categories.id").
+						Where("categories.name = ?", query.CategoryName)
+				}
+				if query.TagName != "" {
+					sql = sql.Joins("JOIN article_tags ON articles.id = article_tags.article_id").
+						Joins("JOIN tags ON article_tags.tag_id = tags.id").
+						Where("tags.name = ?", query.TagName)
+				}
+				sql.Count(&total)
+				sql = sql.Order("articles.created_at desc").
+					Limit(query.PageSize).
+					Offset((query.PageNum - 1) * query.PageSize)
+				sql.Preload("Categories").
+					Preload("Tags")
+				sql.Find(&articles)
+				list := slice.Map(articles, func(i int, article model.Article) VO {
+					return convertToVO(&article)
 				})
-				response.SuccessWithData(c, "查询成功", result)
+				response.SuccessWithData(c, "查询成功", QueryPage{
+					Page: common.Page{
+						Total:    total,
+						PageNum:  query.PageNum,
+						PageSize: query.PageSize,
+						List:     list,
+					},
+				})
 			},
 		},
 	}
@@ -83,6 +112,17 @@ type DTO struct {
 	Content       string   `json:"content"`
 	CategoryNames []string `json:"category_names"`
 	TagNames      []string `json:"tag_names"`
+}
+
+type Query struct {
+	PageNum      int    `json:"page_num"`
+	PageSize     int    `json:"page_size"`
+	CategoryName string `json:"category_name"`
+	TagName      string `json:"tag_name"`
+}
+
+type QueryPage struct {
+	common.Page
 }
 
 type VO struct {
