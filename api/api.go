@@ -3,9 +3,7 @@ package api
 import "github.com/gin-gonic/gin"
 
 type Api struct {
-	Url       string
-	Method    string
-	Dst       interface{}
-	Func      func(c *gin.Context, dst interface{})
-	ParamType string
+	Url    string
+	Method string
+	Func   func(c *gin.Context)
 }

@@ -6,7 +6,6 @@ import (
 	"la-blog-go/api/article"
 	"la-blog-go/api/category"
 	"la-blog-go/api/tag"
-	"la-blog-go/response"
 )
 
 const globalRequestPrefix = "/api"
@@ -27,25 +26,12 @@ func InitRouters() {
 func handleGroup(group string, engine *gin.Engine, apis ...api.Api) {
 	g := engine.Group(globalRequestPrefix + "/" + group)
 	for index := range apis {
-		g.Handle(apis[index].Method, apis[index].Url, bindParams(apis[index].Dst, apis[index].ParamType, apis[index].Func))
+		g.Handle(apis[index].Method, apis[index].Url, preFilter(apis[index].Func))
 	}
 }
 
-func bindParams(paramDst interface{}, paramType string, afterBind func(context *gin.Context, obj interface{})) gin.HandlerFunc {
+func preFilter(afterBind func(context *gin.Context)) gin.HandlerFunc {
 	return func(context *gin.Context) {
-		if paramDst != nil {
-			if paramType == "body" {
-				if err := context.ShouldBindJSON(&paramDst); err != nil {
-					response.Fail(context, "参数格式错误")
-					return
-				}
-			} else if paramType == "param" {
-				if err := context.ShouldBindQuery(&paramDst); err != nil {
-					response.Fail(context, "参数格式错误")
-					return
-				}
-			}
-		}
-		afterBind(context, paramDst)
+		afterBind(context)
 	}
 }

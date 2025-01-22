@@ -14,20 +14,23 @@ import (
 var (
 	Apis = []api.Api{
 		{
-			Dst:       &DTO{},
-			ParamType: "body",
-			Url:       "/save",
-			Method:    "POST",
-			Func: func(c *gin.Context, dst interface{}) {
-				dto := dst.(*DTO)
-				md := convertToArticle(dto)
+			Url:    "/save",
+			Method: "POST",
+			Func: func(c *gin.Context) {
+				var dto DTO
+				err := c.ShouldBindJSON(&dto)
+				if err != nil {
+					response.Fail(c, "参数错误")
+					return
+				}
+				md := convertToArticle(&dto)
 				global.DB.Create(&md)
 				response.Success(c, "保存成功")
 			},
 		}, {
 			Url:    "/list_all",
 			Method: "GET",
-			Func: func(c *gin.Context, dst interface{}) {
+			Func: func(c *gin.Context) {
 				var articles []model.Article
 				global.DB.Model(articles).Order("created_at desc").Preload("Categories").Preload("Tags").Find(&articles)
 				result := slice.Map(articles, func(i int, article model.Article) VO {
@@ -38,7 +41,7 @@ var (
 		}, {
 			Url:    "/list_top_10",
 			Method: "GET",
-			Func: func(c *gin.Context, dst interface{}) {
+			Func: func(c *gin.Context) {
 				var articles []model.Article
 				global.DB.Model(articles).Order("created_at desc").Limit(10).Find(&articles)
 				result := slice.Map(articles, func(i int, article model.Article) SimpleVO {
@@ -49,7 +52,7 @@ var (
 		}, {
 			Url:    "/get_by_id",
 			Method: "GET",
-			Func: func(c *gin.Context, dst interface{}) {
+			Func: func(c *gin.Context) {
 				var article model.Article
 				id := c.Query("id")
 				if id == "" {
@@ -64,14 +67,17 @@ var (
 				response.SuccessWithData(c, "查询成功", convertToVO(&article))
 			},
 		}, {
-			Dst:       &Query{},
-			Url:       "/page",
-			Method:    "POST",
-			ParamType: "body",
-			Func: func(c *gin.Context, dst interface{}) {
+			Url:    "/page",
+			Method: "POST",
+			Func: func(c *gin.Context) {
 				var articles []model.Article
 				var total int64
-				query := dst.(*Query)
+				var query Query
+				err := c.ShouldBindJSON(&query)
+				if err != nil {
+					response.Fail(c, "参数错误")
+					return
+				}
 				sql := global.DB.Model(articles)
 				if query.CategoryName != "" {
 					sql = sql.Joins("JOIN article_categories ON articles.id = article_categories.article_id").

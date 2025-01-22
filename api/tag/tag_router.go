@@ -14,7 +14,7 @@ var (
 		{
 			Url:    "/list_all",
 			Method: "GET",
-			Func: func(c *gin.Context, dst interface{}) {
+			Func: func(c *gin.Context) {
 				var tags []model.Tag
 				global.DB.Model(tags).Order("created_at desc").Find(&tags)
 				result := slice.Map(tags, func(i int, tag model.Tag) SimpleVO {
