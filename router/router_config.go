@@ -5,6 +5,7 @@ import (
 	"la-blog-go/api"
 	"la-blog-go/api/article"
 	"la-blog-go/api/category"
+	"la-blog-go/api/image"
 	"la-blog-go/api/tag"
 )
 
@@ -16,6 +17,7 @@ func InitRouters() {
 	handleGroup("article", r, article.Apis...)
 	handleGroup("tag", r, tag.Apis...)
 	handleGroup("category", r, category.Apis...)
+	handleGroup("file", r, image.Apis...)
 
 	err := r.Run("127.0.0.1:8080")
 	if err != nil {
