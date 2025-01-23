@@ -16,7 +16,10 @@ var (
 			Method: "GET",
 			Func: func(c *gin.Context) {
 				var tags []model.Tag
-				global.DB.Model(tags).Order("created_at desc").Find(&tags)
+				global.DB.Model(tags).
+					Preload("Articles").
+					Order("created_at desc").
+					Find(&tags)
 				result := slice.Map(tags, func(i int, tag model.Tag) SimpleVO {
 					return convertToSimpleVO(&tag)
 				})
@@ -28,12 +31,14 @@ var (
 
 func convertToSimpleVO(tag *model.Tag) SimpleVO {
 	return SimpleVO{
-		ID:   tag.ID,
-		Name: tag.Name,
+		ID:    tag.ID,
+		Name:  tag.Name,
+		Count: len(tag.Articles),
 	}
 }
 
 type SimpleVO struct {
-	ID   uint
-	Name string `json:"name"`
+	ID    uint
+	Name  string `json:"name"`
+	Count int    `json:"count"`
 }
